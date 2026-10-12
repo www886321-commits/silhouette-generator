@@ -90,6 +90,16 @@ function randomCell(x: number, y: number, seed: number, salt = 0) {
   return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
 }
 
+/** Font size is relative to the source image, not to a pixel-effect cell.
+ * Keep these coordinates independent of preview resolution and export scale. */
+export function scatterTextMetrics(width: number, height: number, settings: Pick<SilhouetteSettings, 'fontSize' | 'cellSize'>) {
+  const imageScale = Math.max(width, height) / 1000;
+  const fontSize = 24 * Math.max(1, settings.fontSize) / 100 * imageScale;
+  // Large letters need more room, but changing pixel size must not shrink them.
+  const spacing = Math.max(Math.max(1, settings.cellSize) * imageScale, fontSize * 1.2);
+  return { fontSize, spacing };
+}
+
 export function silhouetteSubject(source: HTMLCanvasElement, fill: string, settings: SilhouetteSettings, maxEdge = Infinity, outputScale = 1) {
   const canvas = surface(source,maxEdge,outputScale), context = canvas.getContext('2d')!;
   const w = source.width, h = source.height, sx = canvas.width / w, sy = canvas.height / h;
@@ -112,17 +122,21 @@ export function silhouetteSubject(source: HTMLCanvasElement, fill: string, setti
   }
   const letters = Array.from(settings.text).filter(letter=>letter.trim());
   if (settings.textEnabled && letters.length && settings.density > 0) {
+    const textMetrics = scatterTextMetrics(w, h, settings);
+    const textStep = textMetrics.spacing;
+    const textColumns = Math.ceil(w / textStep), textRows = Math.ceil(h / textStep);
     const mask = surface(source,maxEdge,outputScale);mask.getContext('2d')!.drawImage(canvas,0,0);
     context.save();context.scale(sx,sy);
     context.fillStyle = settings.textColor;context.textAlign = 'center';context.textBaseline = 'middle';
-    context.font = `bold ${step * settings.fontSize / 100}px "Courier New", "Microsoft YaHei", monospace`;
-    for(let y=0;y<rows;y++)for(let x=0;x<columns;x++) {
+    context.font = `bold ${textMetrics.fontSize}px "Courier New", "Microsoft YaHei", monospace`;
+    for(let y=0;y<textRows;y++)for(let x=0;x<textColumns;x++) {
       if(randomCell(x,y,settings.seed) >= settings.density/100)continue;
-      if(sample((x+.5)*step,(y+.5)*step,step).coverage < .72)continue;
+      if(sample((x+.5)*textStep,(y+.5)*textStep,textStep).coverage < .72)continue;
       const letter = letters[Math.floor(randomCell(x,y,settings.seed,41)*letters.length)];
-      const jitterX = (randomCell(x,y,settings.seed,67)-.5)*step*.26;
-      const jitterY = (randomCell(x,y,settings.seed,89)-.5)*step*.26;
-      context.fillText(letter,(x+.5)*step+jitterX,(y+.5)*step+jitterY,step*.95);
+      const jitterX = (randomCell(x,y,settings.seed,67)-.5)*textStep*.26;
+      const jitterY = (randomCell(x,y,settings.seed,89)-.5)*textStep*.26;
+      // No maxWidth: it would squeeze large glyphs back into tiny pixel cells.
+      context.fillText(letter,(x+.5)*textStep+jitterX,(y+.5)*textStep+jitterY);
     }
     context.restore();context.globalCompositeOperation = 'destination-in';context.drawImage(mask,0,0);
     context.globalCompositeOperation = 'source-over';mask.width=mask.height=1;

@@ -3,7 +3,7 @@ import {cp,mkdir,readdir,readFile,stat,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
-const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),tag=process.argv[2]||'v1.2.0';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),tag=process.argv[2]||'v'+JSON.parse(await readFile(path.join(root,'package.json'),'utf8')).version;
 if(!/^v\d+\.\d+\.\d+$/.test(tag))throw Error('Use vX.Y.Z');
 const destination=path.join(root,'outputs','剪影生成器-桌面本地工具包-'+tag);
 try{await stat(destination);throw Error('Refusing to overwrite existing package: '+destination);}catch(error){if(error.code!=='ENOENT')throw error;}

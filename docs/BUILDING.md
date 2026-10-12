@@ -12,7 +12,7 @@
 
 成品 ZIP 内 app 为构建结果（含模型），source 为对应应用源码和构建说明，licenses / vendor 为依赖许可及 AGPL 精确源码。为减少重复体积，source/public 不重复装模型；离线重建从 app/models 复制到 source/public/models 后安装锁定 npm 依赖、构建。
 
-在源码根目录使用 node scripts/package-local.mjs v1.2.0 生成一个新目录到 outputs；默认拒绝覆盖已有目录。脚本不生成 ZIP；需要发布者显式压缩整个新目录，不能只压 app。旧版本不会被脚本清理。自定义版本号遵守 vX.Y.Z。
+在源码根目录使用 node scripts/package-local.mjs v1.2.1 生成一个新目录到 outputs；默认拒绝覆盖已有目录。脚本不生成 ZIP；需要发布者显式压缩整个新目录，不能只压 app。旧版本不会被脚本清理。自定义版本号遵守 vX.Y.Z。
 
 ## GitHub Pages
 

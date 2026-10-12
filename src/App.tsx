@@ -1787,7 +1787,8 @@ export default function App() {
                   placeholder="输入你喜欢的文字，字符会散落在轮廓内"
                   onChange={event => setSilhouetteEffect(current => ({...current, text: event.target.value}))} /></label>
                 <Range name="文字密度" min={1} max={100} value={silhouetteEffect.density} set={density => setSilhouetteEffect(current => ({...current, density}))} />
-                <Range name="散落字号" min={30} max={140} value={silhouetteEffect.fontSize} set={fontSize => setSilhouetteEffect(current => ({...current, fontSize}))} />
+                <Range name="散落字号" min={30} max={600} value={silhouetteEffect.fontSize} set={fontSize => setSilhouetteEffect(current => ({...current, fontSize}))} />
+                <p className="control-note">字号按照片尺寸等比例缩放，独立于像素大小；放大剪影或高清导出时，文字会同步变大。</p>
                 <label className="effect-field">散落文字颜色<input type="color" aria-label="散落文字颜色" value={silhouetteEffect.textColor}
                   onChange={event => setSilhouetteEffect(current => ({...current, textColor: event.target.value}))} /></label>
                 <button type="button" className="secondary full" onClick={() => setSilhouetteEffect(current => ({...current, seed: current.seed + 1}))}>换一种散落排列</button>

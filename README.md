@@ -4,7 +4,7 @@
 
 ## 最简单的本地安装
 
-在 [Releases](https://github.com/www886321-commits/silhouette-generator/releases) 下载 **silhouette-generator-v1.2.0-desktop.zip**，完整解压，把整个工具包或下面一句话交给你的 AI Agent：
+在 [Releases](https://github.com/www886321-commits/silhouette-generator/releases/latest) 下载 **silhouette-generator-v1.2.1-desktop.zip**，完整解压，把整个工具包或下面一句话交给你的 AI Agent：
 
 > 请完整安装这个剪影生成器工具包，按照 AGENT-INSTALL.md 检查环境、启动本地网页并验证上传照片和 PNG 导出，不要部署公网，不要上传我的照片；完成后告诉我启动和停止方法。
 
@@ -19,7 +19,7 @@ Windows 双击 START-WINDOWS.cmd；Mac/Linux 使用对应 START 文件。成功�
 - 上下、左右、剪影覆盖、残影布局，整组分区一键对调；四层拖拽排序、跨区叠加、画布自由变换。
 - 多种画布比例、自定义大小、宽高比锁定、预览等比适应；推荐五色、自定义颜色、连续内外阴影调整。
 - 彩色半调：圆点/方块/菱形/椭圆/线条，大小、角度、混合和锐度可调。
-- 像素轮廓和可选散落文字，内容、密度、字号、颜色自定；纸纹/颗粒默认关闭。
+- 像素轮廓和可选散落文字，内容、密度、字号、颜色自定；字号 30–600，随图片及高清导出等比缩放，不受像素格宽度限制；纸纹/颗粒默认关闭。
 - 画笔/橡皮默认 6、最小 1，可在实体主体和纯色剪影上修正；最多 15 步撤销/重做。
 - PNG/JPG/WebP 1×/2×/4×、透明剪影 PNG、桌面 PSD 分层导出，作品不含 UI。高清按原图和对象重绘，不放大低清预览。
 

@@ -1,6 +1,6 @@
 # 开源许可证说明（非认证证书）
 
-项目：剪影生成器 v1.2.0。作者：安鱼（Anyu）。Copyright © 2026 安鱼。程序许可：AGPL-3.0-only（GNU Affero General Public License version 3）。完整且具有约束力的英文原文在 LICENSE；本说明不替代原文，也不是法律意见或官方认证。
+项目：剪影生成器 v1.2.1。作者：安鱼（Anyu）。Copyright © 2026 安鱼。程序许可：AGPL-3.0-only（GNU Affero General Public License version 3）。完整且具有约束力的英文原文在 LICENSE；本说明不替代原文，也不是法律意见或官方认证。
 
 可以依据许可证使用、学习、修改和再分发程序；再分发及相关网络使用须履行其源码提供、版权和许可保留等条件。不附带质量、适销性、特定用途或无侵权担保。不得将这个包含 AGPL 依赖的发行版宣传为全 MIT 或闭源商用授权。
 
