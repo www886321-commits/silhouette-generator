@@ -1,0 +1,12 @@
+node_modules/
+dist/
+outputs/
+work/
+.env
+.env.*
+*.log
+*.tsbuildinfo
+.afterimage-runtime.json
+__pycache__/
+.DS_Store
+Thumbs.db

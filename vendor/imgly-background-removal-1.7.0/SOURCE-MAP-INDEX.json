@@ -1,0 +1,218 @@
+[
+  {
+    "original": "../../../node_modules/.pnpm/iota-array@1.0.0/node_modules/iota-array/iota.js",
+    "file": "sources/000-iota.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/is-buffer@1.1.6/node_modules/is-buffer/index.js",
+    "file": "sources/001-index.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/ndarray@1.0.19/node_modules/ndarray/ndarray.js",
+    "file": "sources/002-ndarray.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_freeGlobal.js",
+    "file": "sources/003-_freeGlobal.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_root.js",
+    "file": "sources/004-_root.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_Symbol.js",
+    "file": "sources/005-_Symbol.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_getRawTag.js",
+    "file": "sources/006-_getRawTag.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_objectToString.js",
+    "file": "sources/007-_objectToString.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_baseGetTag.js",
+    "file": "sources/008-_baseGetTag.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/isObject.js",
+    "file": "sources/009-isObject.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/isFunction.js",
+    "file": "sources/010-isFunction.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_coreJsData.js",
+    "file": "sources/011-_coreJsData.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_isMasked.js",
+    "file": "sources/012-_isMasked.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_toSource.js",
+    "file": "sources/013-_toSource.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_baseIsNative.js",
+    "file": "sources/014-_baseIsNative.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_getValue.js",
+    "file": "sources/015-_getValue.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_getNative.js",
+    "file": "sources/016-_getNative.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_nativeCreate.js",
+    "file": "sources/017-_nativeCreate.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_hashClear.js",
+    "file": "sources/018-_hashClear.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_hashDelete.js",
+    "file": "sources/019-_hashDelete.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_hashGet.js",
+    "file": "sources/020-_hashGet.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_hashHas.js",
+    "file": "sources/021-_hashHas.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_hashSet.js",
+    "file": "sources/022-_hashSet.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_Hash.js",
+    "file": "sources/023-_Hash.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_listCacheClear.js",
+    "file": "sources/024-_listCacheClear.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/eq.js",
+    "file": "sources/025-eq.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_assocIndexOf.js",
+    "file": "sources/026-_assocIndexOf.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_listCacheDelete.js",
+    "file": "sources/027-_listCacheDelete.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_listCacheGet.js",
+    "file": "sources/028-_listCacheGet.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_listCacheHas.js",
+    "file": "sources/029-_listCacheHas.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_listCacheSet.js",
+    "file": "sources/030-_listCacheSet.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_ListCache.js",
+    "file": "sources/031-_ListCache.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_Map.js",
+    "file": "sources/032-_Map.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_mapCacheClear.js",
+    "file": "sources/033-_mapCacheClear.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_isKeyable.js",
+    "file": "sources/034-_isKeyable.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_getMapData.js",
+    "file": "sources/035-_getMapData.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_mapCacheDelete.js",
+    "file": "sources/036-_mapCacheDelete.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_mapCacheGet.js",
+    "file": "sources/037-_mapCacheGet.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_mapCacheHas.js",
+    "file": "sources/038-_mapCacheHas.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_mapCacheSet.js",
+    "file": "sources/039-_mapCacheSet.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/_MapCache.js",
+    "file": "sources/040-_MapCache.js"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/lodash-es@4.17.21/node_modules/lodash-es/memoize.js",
+    "file": "sources/041-memoize.js"
+  },
+  {
+    "original": "../src/utils.ts",
+    "file": "sources/042-utils.ts"
+  },
+  {
+    "original": "../src/MimeType.ts",
+    "file": "sources/043-MimeType.ts"
+  },
+  {
+    "original": "../src/codecs.ts",
+    "file": "sources/044-codecs.ts"
+  },
+  {
+    "original": "../src/url.ts",
+    "file": "sources/045-url.ts"
+  },
+  {
+    "original": "../src/onnx.ts",
+    "file": "sources/046-onnx.ts"
+  },
+  {
+    "original": "../src/capabilities.js",
+    "file": "sources/047-capabilities.js"
+  },
+  {
+    "original": "../src/resource.ts",
+    "file": "sources/048-resource.ts"
+  },
+  {
+    "original": "../../../node_modules/.pnpm/zod@3.24.2/node_modules/zod/lib/index.mjs",
+    "file": "sources/049-index.mjs"
+  },
+  {
+    "original": "../package.json",
+    "file": "sources/050-package.json"
+  },
+  {
+    "original": "../src/schema.ts",
+    "file": "sources/051-schema.ts"
+  },
+  {
+    "original": "../src/inference.ts",
+    "file": "sources/052-inference.ts"
+  },
+  {
+    "original": "../src/api/v1.ts",
+    "file": "sources/053-v1.ts"
+  }
+]

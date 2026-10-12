@@ -1,0 +1,6 @@
+*.cmd text eol=crlf
+*.sh text eol=lf
+*.command text eol=lf
+*.png binary
+*.jpg binary
+public/models/* binary
