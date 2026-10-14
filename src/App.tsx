@@ -1839,19 +1839,27 @@ export default function App() {
 
         {active === 'subject' && (
           <Sec l="实体主体效果">
-            <Seg options={[["off", "原照片"], ["on", "彩色半调"]]}
-              value={halftone.enabled ? 'on' : 'off'} set={value => setHalftone(current => ({...current, enabled: value === 'on'}))} />
+            <Seg options={[["off", "原照片"], ["photo", "彩色半调"], ["solid", "纯色波点"]]}
+              value={halftone.enabled ? halftone.colorMode : 'off'}
+              set={value => setHalftone(current => ({...current, enabled: value !== 'off', colorMode: value === 'off' ? current.colorMode : value as HalftoneSettings['colorMode']}))} />
             {halftone.enabled && <div className="effect-controls">
-              <Range name="网点大小" min={4} max={64} value={halftone.cellSize} set={cellSize => setHalftone(current => ({...current, cellSize}))} />
-              <label className="effect-field">网点形状<select aria-label="网点形状" value={halftone.shape}
+              {halftone.colorMode === 'solid' ? <>
+                <ColorField label="波点颜色" value={halftone.solidColor}
+                  onChange={solidColor => setHalftone(current => ({...current, solidColor}))} />
+                <Range name="波点大小" min={2} max={40} value={halftone.dotSize} set={dotSize => setHalftone(current => ({...current, dotSize}))} />
+                <Range name="波点密度" min={20} max={100} value={halftone.density} set={density => setHalftone(current => ({...current, density}))} />
+              </> : <Range name="网点大小" min={4} max={64} value={halftone.cellSize} set={cellSize => setHalftone(current => ({...current, cellSize}))} />}
+              <label className="effect-field">{halftone.colorMode === 'solid' ? '波点形状' : '网点形状'}<select aria-label={halftone.colorMode === 'solid' ? '波点形状' : '网点形状'} value={halftone.shape}
                 onChange={event => setHalftone(current => ({...current, shape: event.target.value as DotShape}))}>
                 <option value="dot">圆点 · Dot</option><option value="square">方块 · Square</option>
                 <option value="diamond">菱形 · Diamond</option><option value="ellipse">椭圆 · Ellipse</option><option value="line">线条 · Line</option>
               </select></label>
-              <Range name="网点角度" min={-90} max={90} value={halftone.angle} set={angle => setHalftone(current => ({...current, angle}))} />
-              <Range name="半调混合" min={0} max={100} value={halftone.mix} set={mix => setHalftone(current => ({...current, mix}))} />
-              <Range name="半调锐度" min={0} max={100} value={halftone.sharpness} set={sharpness => setHalftone(current => ({...current, sharpness}))} />
-              <p className="control-note">保留原照片颜色，以规则网点组成主体。混合 100 为纯网点；0 为原照片。网点之间露出下方图层。</p>
+              <Range name={halftone.colorMode === 'solid' ? '波点角度' : '网点角度'} min={-90} max={90} value={halftone.angle} set={angle => setHalftone(current => ({...current, angle}))} />
+              <Range name={halftone.colorMode === 'solid' ? '效果混合' : '半调混合'} min={0} max={100} value={halftone.mix} set={mix => setHalftone(current => ({...current, mix}))} />
+              {halftone.colorMode === 'photo' && <Range name="半调锐度" min={0} max={100} value={halftone.sharpness} set={sharpness => setHalftone(current => ({...current, sharpness}))} />}
+              <p className="control-note">{halftone.colorMode === 'solid'
+                ? '用统一颜色、等大波点组成轮廓。大小与密度独立调整；数值过大时波点会相连。混合 100 为纯色波点，0 为原照片。'
+                : '保留原照片颜色，以规则网点组成主体。混合 100 为纯网点；0 为原照片。网点之间露出下方图层。'}</p>
             </div>}
           </Sec>
         )}

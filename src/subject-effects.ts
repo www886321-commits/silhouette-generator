@@ -4,6 +4,7 @@ export type DotShape = 'dot' | 'square' | 'diamond' | 'ellipse' | 'line';
 export type HalftoneSettings = {
   enabled: boolean; cellSize: number; shape: DotShape;
   angle: number; mix: number; sharpness: number;
+  colorMode: 'photo' | 'solid'; solidColor: string; dotSize: number; density: number;
 };
 export type SilhouetteSettings = {
   style: 'clean' | 'pixel'; cellSize: number;
@@ -12,6 +13,7 @@ export type SilhouetteSettings = {
 };
 export const defaultHalftone: HalftoneSettings = {
   enabled: false, cellSize: 18, shape: 'dot', angle: 0, mix: 100, sharpness: 60,
+  colorMode: 'photo', solidColor: '#FFFFFF', dotSize: 10, density: 65,
 };
 export const defaultSilhouette: SilhouetteSettings = {
   style: 'clean', cellSize: 24, textEnabled: false,
@@ -50,7 +52,10 @@ export function halftoneSubject(source: HTMLCanvasElement, settings: HalftoneSet
   const canvas = surface(source, maxEdge, outputScale), context = canvas.getContext('2d')!;
   const dots = surface(source, maxEdge, outputScale), dotContext = dots.getContext('2d')!;
   const w = source.width, h = source.height;
-  const step = Math.max(1, settings.cellSize) * Math.max(w, h) / 1000;
+  const solid = settings.colorMode === 'solid';
+  const imageScale = Math.max(w, h) / 1000;
+  // In solid mode spacing and diameter are independent source-space measurements.
+  const step = (solid ? 1000 / Math.max(1, settings.density) : Math.max(1, settings.cellSize)) * imageScale;
   const angle = settings.angle * Math.PI / 180, cos = Math.cos(angle), sin = Math.sin(angle);
   const sample = sampler(source), span = Math.hypot(w, h) / 2 + step;
   dotContext.scale(dots.width / w, dots.height / h);
@@ -63,8 +68,9 @@ export function halftoneSubject(source: HTMLCanvasElement, settings: HalftoneSet
       const color = sample(nativeX, nativeY, step, angle);
       if (color.coverage < .32) continue;
       const luminance = (color.r * .2126 + color.g * .7152 + color.b * .0722) / 255;
-      const radius = step * (.47 - luminance * (.08 + settings.sharpness / 100 * .2));
-      dotContext.fillStyle = `rgb(${color.r},${color.g},${color.b})`;
+      const radius = solid ? Math.max(1, settings.dotSize) * imageScale / 2
+        : step * (.47 - luminance * (.08 + settings.sharpness / 100 * .2));
+      dotContext.fillStyle = solid ? settings.solidColor : `rgb(${color.r},${color.g},${color.b})`;
       dotContext.beginPath();
       if (settings.shape === 'square') dotContext.rect(x-radius, y-radius, radius*2, radius*2);
       else if (settings.shape === 'diamond') {
