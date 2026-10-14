@@ -1287,7 +1287,7 @@ textarea,
   margin-bottom: 0;
 }
 .canvas-wrap.repairing canvas {
-  cursor: crosshair;
+  cursor: none;
 }
 .transform-overlay,
 .transform-layer {
@@ -1368,30 +1368,16 @@ textarea,
   z-index: 3;
   display: none;
   transform: translate(-50%, -50%);
-  border: 1.5px solid #fff;
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 1px #24231f,
-    0 2px 8px #24231f33;
+  border: 0;
+  background: none;
+  box-shadow: none;
   pointer-events: none;
 }
-.brush-cursor.paint {
-  background: rgb(242 229 39 / 0.24);
-}
-.brush-cursor.erase {
-  background: rgb(214 66 43 / 0.18);
-}
-.brush-cursor:after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 0 1px #24231f;
-  transform: translate(-50%, -50%);
+.brush-cursor svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
 .mask-status {
   position: absolute;

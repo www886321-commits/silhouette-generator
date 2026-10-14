@@ -307,6 +307,7 @@ export default function App() {
   const dragRef = useRef<DragState | null>(null);
   const transformGestureRef = useRef<TransformGesture | null>(null);
   const brushCursorRef = useRef<HTMLDivElement>(null);
+  const brushPointRef = useRef<Point | null>(null);
   const maskStrokeRef = useRef<MaskStroke | null>(null);
   const maskHistoryRef = useRef<{
     undo: MaskHistoryEntry[];
@@ -354,6 +355,7 @@ export default function App() {
   const inspectorBodyRef = useRef<HTMLDivElement>(null);
   const [inspectorEnabled, setInspectorEnabled] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(() => window.matchMedia('(min-width: 901px)').matches);
   const [subjectText, setSubjectText] = useState<SilhouetteSettings>({...defaultSilhouette, text: "余像", textEnabled: false});
   const [active, setActive] = useState<Layer>("silhouette");
   useEffect(() => { if (inspectorBodyRef.current) inspectorBodyRef.current.scrollTop = 0; }, [active, inspectorOpen]);
@@ -362,6 +364,16 @@ export default function App() {
   const [layerDrop, setLayerDrop] = useState<{ layer: Layer; after: boolean } | null>(null);
   const [tool, setTool] = useState<Tool>("edit");
   const [sheet, setSheet] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 901px)');
+    const update = () => {
+      setIsDesktopViewport(query.matches);
+      if (query.matches) setSheet(false);
+      else setInspectorOpen(false);
+    };
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
   const [exporting, setExporting] = useState(false);
   const [maskMode, setMaskMode] = useState<MaskMode>("none");
   const [paintSize, setPaintSize] = useState(6);
@@ -1309,6 +1321,7 @@ export default function App() {
   const finishMask = () => {
     refreshMaskBackground();
     setMaskMode("none");
+    brushPointRef.current = null;
     if (brushCursorRef.current) brushCursorRef.current.style.display = "none";
   };
 
@@ -1414,13 +1427,27 @@ export default function App() {
     refreshMaskBackground();
   };
 
-  const positionBrushCursor = (point: Point, visible = true) => {
+  const positionBrushCursor = useCallback((point: Point, visible = true) => {
     const cursor = brushCursorRef.current;
-    if (!cursor) return;
-    cursor.style.left = `${point.x * 100}%`;
-    cursor.style.top = `${point.y * 100}%`;
+    const canvas = canvasRef.current;
+    const viewport = canvasView.viewportRef.current;
+    if (!cursor || !canvas || !viewport) return;
+    brushPointRef.current = point;
+    const canvasRect = canvas.getBoundingClientRect();
+    const viewportRect = viewport.getBoundingClientRect();
+    // Match stampMask's canvas-space radius; keep the outline outside the zoomed artwork.
+    cursor.style.width = `${activeBrushSize * 2 * canvasRect.width / size.w}px`;
+    cursor.style.height = `${activeBrushSize * 2 * canvasRect.height / size.h}px`;
+    cursor.style.left = `${canvasRect.left - viewportRect.left - viewport.clientLeft + point.x * canvasRect.width}px`;
+    cursor.style.top = `${canvasRect.top - viewportRect.top - viewport.clientTop + point.y * canvasRect.height}px`;
     cursor.style.display = visible ? "block" : "none";
-  };
+  }, [activeBrushSize, size.w, size.h, canvasView.viewportRef]);
+
+  useEffect(() => {
+    if (brushPointRef.current && brushCursorRef.current?.style.display === 'block') {
+      positionBrushCursor(brushPointRef.current);
+    }
+  }, [positionBrushCursor, displayWidth, canvasView.zoom]);
 
   const pointerDown = (event: React.PointerEvent) => {
     if (!hasImage || busy || exporting || backgroundLoading || thresholdPreviewPending) return;
@@ -1428,6 +1455,7 @@ export default function App() {
     const point = pointerPoint(event);
     if (maskMode !== "none") {
       const layer = brushLayerAt(point);
+      positionBrushCursor(point);
       setActive(layer);
       beginMaskStroke();
       stampMask(point, layer);
@@ -1437,7 +1465,7 @@ export default function App() {
     }
     const selected = pickLayer(point);
     setActive(selected);
-    if (inspectorEnabled) setInspectorOpen(true);
+    if (isDesktopViewport && inspectorEnabled) setInspectorOpen(true);
     if (selected !== "solid" && !(selected === 'background' && sceneMode === 'solid')) {
       dragRef.current = {
         id: event.pointerId,
@@ -1788,7 +1816,7 @@ export default function App() {
                 onDragEnd={() => { draggedLayerRef.current = null; setLayerDrop(null); }}>
                 <span className="layer-grip" title="拖动图层调整顺序"><DotsSixVertical /></span>
                 <button className={`layer-select ${active === layer ? "active" : ""}`}
-                  onClick={() => { if (inspectorEnabled) setInspectorOpen(true); setActive(layer); if (layer === "background" || layer === "solid") { setMaskMode("none"); setMaskView(false); } }}
+                  onClick={() => { if (isDesktopViewport && inspectorEnabled) setInspectorOpen(true); setActive(layer); if (layer === "background" || layer === "solid") { setMaskMode("none"); setMaskView(false); } }}
                 >
                   <span className="layer-glyph" aria-hidden="true">
                     {layer === 'silhouette' ? <Selection size={22} weight="light" /> : layer === 'subject' ? <UserCircle size={22} weight="light" /> : layer === 'solid' ? <Square size={22} weight="light" /> : <ImageSquare size={22} weight="light" />}
@@ -2061,7 +2089,7 @@ export default function App() {
       sceneMode, sceneColor, backgroundId, backgroundName, autoBackground, backgroundLoading, backgroundRevision, hasImage,
       originalLinked,
       layerOrder, layerDrop,
-      canvasRatioLocked, inspectorEnabled,
+      canvasRatioLocked, inspectorEnabled, isDesktopViewport,
       halftone, silhouetteEffect, subjectText,
       panelsSwapped,
     ],
@@ -2140,7 +2168,7 @@ export default function App() {
     document.addEventListener('keydown', escape);
     return () => { window.removeEventListener('resize', keepCardVisible); document.removeEventListener('pointerdown', dismiss, true); document.removeEventListener('keydown', escape); };
   }, [inspectorOpen]);
-  const contextCard = hasImage && inspectorEnabled && inspectorOpen && <aside className="context-card" style={cardPosition ? {left:cardPosition.x,top:cardPosition.y,right:'auto'} : undefined} aria-label={`${layerNames[active]}调整卡片`}>
+  const contextCard = isDesktopViewport && hasImage && inspectorEnabled && inspectorOpen && <aside className="context-card" style={cardPosition ? {left:cardPosition.x,top:cardPosition.y,right:'auto'} : undefined} aria-label={`${layerNames[active]}调整卡片`}>
     <header className="context-card-head" title="拖动标题栏移动卡片"
       onPointerDown={event => {
         if (event.button !== 0 || (event.target as Element).closest('button')) return;
@@ -2300,9 +2328,10 @@ export default function App() {
 
         <section className="stage" ref={stageRef}>
           <div className="stage-meta">
-            <span>
+            <span className="canvas-dimensions">
               AUTO · {size.w} × {size.h}
             </span>
+            {!isDesktopViewport && <button type="button" className="mobile-photo" disabled={busy || exporting || backgroundLoading} onClick={() => fileRef.current?.click()}><UploadSimple />{hasImage ? '更换照片' : '上传照片'}</button>}
             <span className="canvas-view-controls">
               <button type="button" className="canvas-fit" onClick={fitCanvasToStage} title="保持原比例完整显示，不改变导出尺寸"><CornersOut />适应窗口</button>
               <button type="button" className="canvas-nav" aria-label="移动画布" aria-pressed={canvasView.handMode} title="拖动画布，也可按住空格或鼠标中键拖动" onClick={() => canvasView.setHandMode(value => !value)}><Hand /></button>
@@ -2311,8 +2340,8 @@ export default function App() {
                 <small aria-label="画布缩放比例">{displayWidth ? Math.round(displayWidth / size.w * canvasView.zoom * 100) : 100}%</small>
                 <button type="button" className="canvas-nav" aria-label="放大画布" disabled={canvasView.zoom >= 8} onClick={() => canvasView.zoomBy(1.2)}><MagnifyingGlassPlus /></button>
               </span>
-              {hasImage ? `当前图层  ${layerNames[active]}` : "等待照片"}
-<button type="button" className="context-toggle" aria-pressed={inspectorEnabled} title="开启或关闭选区调整卡片" onClick={() => { setInspectorEnabled(enabled => !enabled); setInspectorOpen(false); }}>浮现卡片<span aria-hidden="true">{inspectorEnabled ? "开" : "关"}</span></button>
+              <span className="canvas-active-layer">{hasImage ? `当前图层  ${layerNames[active]}` : "等待照片"}</span>
+{isDesktopViewport && <button type="button" className="context-toggle" aria-pressed={inspectorEnabled} title="开启或关闭选区调整卡片" onClick={() => { setInspectorEnabled(enabled => !enabled); setInspectorOpen(false); }}>浮现卡片<span aria-hidden="true">{inspectorEnabled ? "开" : "关"}</span></button>}
 <div className="theme-corner" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setThemeMenuOpen(false); }} onKeyDown={event => { if (event.key === 'Escape') { setThemeMenuOpen(false); event.currentTarget.querySelector('button')?.focus(); } }}>
   <button className="template-theme-toggle" type="button" aria-label="选择界面主题" title="切换界面主题" aria-expanded={themeMenuOpen} aria-controls="theme-choices" onClick={() => setThemeMenuOpen(open => !open)}><TemplateThemeIcon dark={uiTheme === 'dark'} /></button>
   {themeMenuOpen && <div className="theme-popover" id="theme-choices" role="group" aria-label="界面主题">
@@ -2409,7 +2438,7 @@ export default function App() {
                     onPointerDown={(event) => {
                       const selected = pickLayer(pointerPoint(event));
                       setActive(selected);
-                      if (inspectorEnabled) setInspectorOpen(true);
+                      if (isDesktopViewport && inspectorEnabled) setInspectorOpen(true);
                       if (selected !== "solid" && !(selected === 'background' && sceneMode === 'solid')) beginTransformGesture(event, "move", selected);
                     }}
                   >
@@ -2438,16 +2467,6 @@ export default function App() {
                 </div>
               </div>
             )}
-            {hasImage && maskMode !== "none" && !thresholdPreviewPending && (
-              <div
-                ref={brushCursorRef}
-                className={`brush-cursor ${maskMode}`}
-                style={{
-                  width: `${(activeBrushSize * 2 * 100) / size.w}%`,
-                  aspectRatio: "1 / 1",
-                }}
-              />
-            )}
             {!hasImage && (
               <button
                 className="upload-empty"
@@ -2471,6 +2490,14 @@ export default function App() {
             )}
           </div>
 
+            {hasImage && maskMode !== "none" && !thresholdPreviewPending && (
+              <div ref={brushCursorRef} className={`brush-cursor ${maskMode}`} aria-hidden="true">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <circle cx="50" cy="50" r="50" fill="none" stroke="#24231f" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                  <circle cx="50" cy="50" r="50" fill="none" stroke="#fff" strokeWidth="0.75" vectorEffect="non-scaling-stroke" />
+                </svg>
+              </div>
+            )}
           </div>
 
           {hasImage && maskMode === "none" && (
@@ -2531,14 +2558,14 @@ export default function App() {
         />
       </div>
 
-      {sheet && (
+      {!isDesktopViewport && sheet && (
         <>
           <button
             className="sheet-scrim"
             onClick={() => setSheet(false)}
             aria-label="关闭面板"
           />
-          <section className="bottom-sheet">
+          <section className="bottom-sheet" role="dialog" aria-modal="true" aria-label={tool === 'edit' ? '编辑工具' : '导出文件'}>
             <div className="sheet-handle" />
             <button
               className="sheet-close"
