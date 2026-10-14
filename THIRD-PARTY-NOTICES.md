@@ -26,3 +26,7 @@
 | school-field.png | 安鱼提供并确认可公开分发 | 操场草地天空 |
 
 2026-10-13：提供者确认后四张可随本项目、安装包公开分发和使用；这项确认不构成对未知第三方素材的权利担保，也不等同于对图库转售的额外授权。安鱼的品牌标识及二维码可随本工具展示，不表示向第三方授予商标权或为其背书。用户自己上传的照片仍属于其相应权利人；本工具不主动上传、收集或公开这些照片。
+
+## 本次界面字体和图标
+
+Plix（普利世）标题字体与 Geist Mono 均保留其 SIL Open Font License 原文于 app/fonts 和 source/public/fonts。转换后的 WOFF2 随包自托管，不依赖远程字体。主题 Moon/Sun 图标沿用 lucide-react 1.50.0 的 SVG 路径（ISC），原文见 licenses/LUCIDE-ISC.txt。其他功能图标使用现有 Phosphor Icons，保留原许可证。

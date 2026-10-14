@@ -1,4 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { RepairToolbar } from './RepairToolbar';
+import { ColorField } from './ColorField';
+import { useCanvasView } from './useCanvasView';
+import { TemplateThemeIcon } from './TemplateThemeIcon';
+import { Children, isValidElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { segment } from "./segmentation";
 import { backgroundPresets, backgroundPreview, backgroundUrl, loadBackgroundImage, recommendBackground } from "./backgrounds";
 import { adjustedPhoto, canvasBlob, exportSize, innerShadow, recommendColors, textureTile, type Layout } from "./editor-utils";
@@ -14,9 +18,13 @@ import {
   DownloadSimple,
   DotsSixVertical,
   GlobeSimple,
+  Hand,
+  MagnifyingGlassMinus,
+  MagnifyingGlassPlus,
   ImageSquare,
   Palette,
   Selection,
+  Square,
   SlidersHorizontal,
   Sparkle,
   UploadSimple,
@@ -261,13 +269,26 @@ function grain(
 }
 
 export default function App() {
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const [uiTheme, setUiTheme] = useState<'light' | 'ivory' | 'dark'>(() => {
+    try { const saved = localStorage.getItem('afterimage-ui-theme'); return saved === 'ivory' || saved === 'dark' ? saved : 'light'; } catch { return 'light'; }
+  });
+  useEffect(() => {
+    document.documentElement.dataset.uiTheme = uiTheme;
+    try { localStorage.setItem('afterimage-ui-theme', uiTheme); } catch { /* Storage can be unavailable. */ }
+  }, [uiTheme]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLElement>(null);
+  const canvasView = useCanvasView();
   const fileRef = useRef<HTMLInputElement>(null);
   const backgroundFileRef = useRef<HTMLInputElement>(null);
   const originalRef = useRef<HTMLImageElement | null>(null);
   const pendingFileRef = useRef<File | null>(null);
   const processingRef = useRef(false);
+  const thresholdInputRef = useRef<{source: HTMLCanvasElement; width: number; height: number; pixels: Uint8ClampedArray} | null>(null);
+  const thresholdPreviewRef = useRef<{canvas: HTMLCanvasElement; background: HTMLCanvasElement | null} | null>(null);
+  const [appliedThreshold, setAppliedThreshold] = useState(96);
+  const [thresholdPreviewRevision, setThresholdPreviewRevision] = useState(0);
   const rawMaskRef = useRef<HTMLCanvasElement | null>(null);
   const innerCacheRef = useRef<{ key: string; canvas: HTMLCanvasElement } | null>(null);
   const toneCacheRef = useRef<{ key: string; canvas: HTMLCanvasElement } | null>(null);
@@ -328,7 +349,14 @@ export default function App() {
     silhouette: { x: 0.25, y: 0.5, scale: 1, rotation: 0 },
     subject: { x: 0.75, y: 0.5, scale: 1, rotation: 0 },
   });
+  const [cardPosition, setCardPosition] = useState<{x:number;y:number} | null>(null);
+  const contextDragRef = useRef<{id:number;dx:number;dy:number;x:number;y:number} | null>(null);
+  const inspectorBodyRef = useRef<HTMLDivElement>(null);
+  const [inspectorEnabled, setInspectorEnabled] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [subjectText, setSubjectText] = useState<SilhouetteSettings>({...defaultSilhouette, text: "余像", textEnabled: false});
   const [active, setActive] = useState<Layer>("silhouette");
+  useEffect(() => { if (inspectorBodyRef.current) inspectorBodyRef.current.scrollTop = 0; }, [active, inspectorOpen]);
   const [layerOrder, setLayerOrder] = useState<Layer[]>(defaultLayerOrder);
   const draggedLayerRef = useRef<Layer | null>(null);
   const [layerDrop, setLayerDrop] = useState<{ layer: Layer; after: boolean } | null>(null);
@@ -352,27 +380,28 @@ export default function App() {
     [layout, size.h, size.w, split, panelsSwapped],
   );
 
-  const fitCanvasToStage = useCallback(() => {
-    const stage = stageRef.current;
-    if (!stage) return;
-    const style = getComputedStyle(stage);
-    const availableW = stage.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-    let availableH = stage.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom) - 42;
-    for (const child of stage.querySelectorAll<HTMLElement>(':scope > .stage-meta, :scope > .object-switch, :scope > .runtime-note, :scope > .mask-status, :scope > .error-note')) {
-      const spacing = getComputedStyle(child);
-      availableH -= child.getBoundingClientRect().height + parseFloat(spacing.marginTop || '0') + parseFloat(spacing.marginBottom || '0');
-    }
-    const width = Math.max(1, Math.floor(Math.min(availableW, Math.max(1, availableH) * size.w / size.h)));
+  const measureCanvasFit = useCallback(() => {
+    const viewport = canvasView.viewportRef.current;
+    if (!viewport) return;
+    const availableW = Math.max(1, viewport.clientWidth - 40);
+    const availableH = Math.max(1, viewport.clientHeight - 40);
+    const width = Math.max(1, Math.floor(Math.min(availableW, availableH * size.w / size.h)));
     setDisplayWidth(current => current === width ? current : width);
-  }, [size.w, size.h]);
+  }, [size.w, size.h, canvasView.viewportRef]);
+
+  const fitCanvasToStage = useCallback(() => {
+    canvasView.reset();
+    measureCanvasFit();
+  }, [canvasView.reset, measureCanvasFit]);
 
   useEffect(() => {
-    const frame = requestAnimationFrame(fitCanvasToStage);
-    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(fitCanvasToStage) : null;
-    if (stageRef.current) observer?.observe(stageRef.current);
-    window.addEventListener('resize', fitCanvasToStage);
-    return () => { cancelAnimationFrame(frame); observer?.disconnect(); window.removeEventListener('resize', fitCanvasToStage); };
-  }, [fitCanvasToStage, hasImage, maskMode, error, processingMode]);
+    const frame = requestAnimationFrame(measureCanvasFit);
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measureCanvasFit) : null;
+    if (canvasView.viewportRef.current) observer?.observe(canvasView.viewportRef.current);
+    return () => { cancelAnimationFrame(frame); observer?.disconnect(); };
+  }, [measureCanvasFit, canvasView.viewportRef]);
+
+  useEffect(() => { canvasView.reset(); }, [hasImage, canvasView.reset]);
 
   const changeCustomDimension = (dimension: 'width' | 'height', value: string) => {
     if (dimension === 'width') setCustomWidth(value); else setCustomHeight(value);
@@ -381,6 +410,56 @@ export default function App() {
     if (dimension === 'width') setCustomHeight(String(Math.round(amount * size.h / size.w)));
     else setCustomWidth(String(Math.round(amount * size.w / size.h)));
   };
+
+  const thresholdPreviewPending = hasImage && alphaThreshold !== appliedThreshold;
+  useEffect(() => {
+    const original = originalRef.current, rawMask = rawMaskRef.current;
+    if (!original || !rawMask || !hasImage || busy || exporting) return;
+    const invalidateEffects = () => {
+      maskCacheRef.current = null; subjectEffectRef.current = null;
+      innerCacheRef.current = null; toneCacheRef.current = null;
+    };
+    if (!thresholdPreviewPending) {
+      const previous = thresholdPreviewRef.current;
+      if (previous) {
+        previous.canvas.width = previous.canvas.height = 1;
+        if (previous.background) previous.background.width = previous.background.height = 1;
+        thresholdPreviewRef.current = null; invalidateEffects();
+        setThresholdPreviewRevision(v => v + 1);
+      }
+      return;
+    }
+    const scheduled = requestAnimationFrame(() => {
+      let input = thresholdInputRef.current;
+      if (!input || input.source !== rawMask) {
+        const scale = Math.min(1, 1024 / Math.max(rawMask.width, rawMask.height));
+        const prepared = document.createElement('canvas');
+        prepared.width = Math.max(1, Math.round(rawMask.width * scale));
+        prepared.height = Math.max(1, Math.round(rawMask.height * scale));
+        const context = prepared.getContext('2d', {willReadFrequently: true})!;
+        context.drawImage(original, 0, 0, prepared.width, prepared.height);
+        context.globalCompositeOperation = 'destination-in';
+        context.drawImage(rawMask, 0, 0, prepared.width, prepared.height);
+        input = {source:rawMask, width:prepared.width, height:prepared.height,
+          pixels:context.getImageData(0, 0, prepared.width, prepared.height).data};
+        thresholdInputRef.current = input;
+        prepared.width = prepared.height = 1;
+      }
+      const pixels = new Uint8ClampedArray(input.pixels);
+      for (let i = 3; i < pixels.length; i += 4) pixels[i] = pixels[i] > alphaThreshold ? 255 : 0;
+      const preview = document.createElement('canvas');
+      preview.width = input.width; preview.height = input.height;
+      preview.getContext('2d')!.putImageData(new ImageData(pixels, input.width, input.height), 0, 0);
+      const previous = thresholdPreviewRef.current;
+      if (previous) {
+        previous.canvas.width = previous.canvas.height = 1;
+        if (previous.background) previous.background.width = previous.background.height = 1;
+      }
+      thresholdPreviewRef.current = {canvas:preview, background:null};
+      invalidateEffects(); setThresholdPreviewRevision(v => v + 1);
+    });
+    return () => cancelAnimationFrame(scheduled);
+  }, [alphaThreshold, thresholdPreviewPending, hasImage, busy, exporting]);
 
   const render = useCallback(
     (
@@ -402,9 +481,10 @@ export default function App() {
         context.fillRect(0, 0, W, H);
       }
       const original = originalRef.current;
-      const subject = subjectRef.current;
+      const liveThreshold = multiplier < .95 && !only ? thresholdPreviewRef.current : null;
+      const subject = liveThreshold?.canvas ?? subjectRef.current;
       const background = sceneMode === 'original' && original && subject
-        ? (multiplier > .95 ? (fullOriginalBackgroundRef.current ??= cutOriginalBackground(original, subject, Infinity))
+        ? (liveThreshold ? (liveThreshold.background ??= cutOriginalBackground(original, subject)) : multiplier > .95 ? (fullOriginalBackgroundRef.current ??= cutOriginalBackground(original, subject, Infinity))
           : (originalBackgroundRef.current ??= cutOriginalBackground(original, subject)))
         : (multiplier > .95 ? backgroundRef.current : backgroundPreviewRef.current);
       const backgroundImage = sceneMode === 'original' ? original : backgroundRef.current;
@@ -537,13 +617,13 @@ export default function App() {
       const drawSubject = () => {
         if (layout === 'overlay') return;
         let image = subject;
-        if (halftone.enabled) {
+        if (halftone.enabled || subjectText.textEnabled) {
           const limit = multiplier < .95 ? 1600 : Infinity;
           const effectScale = multiplier < .95 ? 1 : Math.min(Math.sqrt(24_000_000 / (subject.width * subject.height)), 8192 / Math.max(subject.width, subject.height),
             Math.max(1, fitBase(frame.solid, subject.width, subject.height, 'contain') * transforms.subject.scale * multiplier));
-          const key = `${maskRevision}-${limit}-${effectScale}-${JSON.stringify(halftone)}`;
+          const key = `${maskRevision}-${limit}-${effectScale}-${JSON.stringify(halftone)}-${JSON.stringify(subjectText)}`;
           if (!subjectEffectRef.current || subjectEffectRef.current.key !== key) {
-            subjectEffectRef.current = { key, canvas: halftoneSubject(subject, halftone, limit, effectScale) };
+            subjectEffectRef.current = { key, canvas: subjectText.textEnabled ? silhouetteSubject(subject, color, subjectText, limit, effectScale, halftone.enabled ? halftoneSubject(subject, halftone, limit, effectScale) : subject) : halftoneSubject(subject, halftone, limit, effectScale) };
           }
           image = subjectEffectRef.current.canvas;
         }
@@ -604,7 +684,7 @@ export default function App() {
       frames,
       hasImage,
       inner,
-      maskRevision,
+      maskRevision, thresholdPreviewRevision,
       mono,
       outer,
       size.h,
@@ -616,7 +696,7 @@ export default function App() {
       maskView,
       sceneMode, sceneColor, backgroundRevision,
       layerOrder,
-      halftone, silhouetteEffect,
+      halftone, silhouetteEffect, subjectText,
     ],
   );
 
@@ -899,7 +979,7 @@ export default function App() {
       const rawMask = document.createElement("canvas");
       rawMask.width = subjectCanvas.width; rawMask.height = subjectCanvas.height;
       rawMask.getContext("2d")!.drawImage(subjectCanvas, 0, 0);
-      rawMaskRef.current = rawMask;
+      rawMaskRef.current = rawMask; thresholdInputRef.current = null; thresholdPreviewRef.current = null; setAppliedThreshold(alphaThreshold);
       // Preserve the original RGB pixels, then apply only the alpha from the AI result.
       const sc = subjectCanvas.getContext("2d")!;
       sc.clearRect(0, 0, subjectCanvas.width, subjectCanvas.height);
@@ -976,7 +1056,7 @@ export default function App() {
   const exportMultiplier = exportDimensions.factor;
 
   const download = async (format: "png" | "jpeg" | "webp", cutout = false) => {
-    if (!hasImage || exporting || busy || backgroundLoading) return;
+    if (!hasImage || exporting || busy || backgroundLoading || thresholdPreviewPending) return;
     setExporting(true);
     setProgress(cutout ? "正在生成透明剪影…" : "正在使用原图重新渲染高清图片…");
     const output = document.createElement("canvas");
@@ -1004,7 +1084,7 @@ export default function App() {
   };
 
   const exportPsd = async () => {
-    if (!hasImage || exporting || busy || backgroundLoading) return;
+    if (!hasImage || exporting || busy || backgroundLoading || thresholdPreviewPending) return;
     setExporting(true);
     setProgress("正在整理 PSD 独立图层…");
     try {
@@ -1261,6 +1341,10 @@ export default function App() {
     context.drawImage(rawMaskRef.current, 0, 0);
     context.globalCompositeOperation = "source-over";
     solidifyAlpha(subject, alphaThreshold);
+    const previous = thresholdPreviewRef.current;
+    if (previous) { previous.canvas.width = previous.canvas.height = 1; if (previous.background) previous.background.width = previous.background.height = 1; }
+    thresholdPreviewRef.current = null; setAppliedThreshold(alphaThreshold);
+    subjectEffectRef.current = null;
     maskHistoryRef.current = { undo: [], redo: [] };
     setHistoryRevision(value => value + 1);
     refreshMaskBackground();
@@ -1339,7 +1423,7 @@ export default function App() {
   };
 
   const pointerDown = (event: React.PointerEvent) => {
-    if (!hasImage || busy || exporting || backgroundLoading) return;
+    if (!hasImage || busy || exporting || backgroundLoading || thresholdPreviewPending) return;
     canvasRef.current?.setPointerCapture(event.pointerId);
     const point = pointerPoint(event);
     if (maskMode !== "none") {
@@ -1353,6 +1437,7 @@ export default function App() {
     }
     const selected = pickLayer(point);
     setActive(selected);
+    if (inspectorEnabled) setInspectorOpen(true);
     if (selected !== "solid" && !(selected === 'background' && sceneMode === 'solid')) {
       dragRef.current = {
         id: event.pointerId,
@@ -1523,15 +1608,15 @@ export default function App() {
     };
   }, [active, frames, hasImage, maskRevision, size.h, size.w, transforms, sceneMode, backgroundRevision]);
 
-  const transformControls = (layer: Transformable) => (
+  const transformControls = (layer: Transformable, showHorizontal = true) => (
     <>
-      <Range
+      {showHorizontal && <Range
         name="横向位置"
         min={-20}
         max={120}
         value={transforms[layer].x * 100}
         set={(value) => setObject(layer, { x: value / 100 })}
-      />
+      />}
       <Range
         name="纵向位置"
         min={-20}
@@ -1614,7 +1699,7 @@ export default function App() {
                 onClick={() => changeLayout(item)}
                 key={item}
               >
-                <span className={`layout-thumb ${item} ${panelsSwapped ? 'swapped' : ''}`}>
+<span className={`layout-thumb ${item} ${panelsSwapped ? 'swapped' : ''}`}>
                   <i />
                   <b />
                 </span>
@@ -1674,8 +1759,8 @@ export default function App() {
               </p>
               <p className="control-note">可在画布上移动、缩放和旋转背景；背景与剪影独立，不使用原照片背景。</p>
             </> : sceneMode === 'solid' ? <>
-              <label className="scene-color">背景颜色<input type="color" aria-label="剪影背景颜色" value={sceneColor}
-                onChange={event => {setSceneColor(event.target.value); setAutoBackground(false);}} /></label>
+              <ColorField label="剪影背景颜色" name="背景颜色" value={sceneColor}
+                onChange={value => { setSceneColor(value); setAutoBackground(false); }} />
               <div className="scene-swatches">{suggestedColors.map(swatch => <button type="button" key={swatch}
                 aria-label={`背景颜色 ${swatch}`} style={{background: swatch}} onClick={() => setSceneColor(swatch)} />)}</div>
               <p className="control-note">纯色只填充剪影所在分区，不改变另一半的人物背景色。</p>
@@ -1703,14 +1788,11 @@ export default function App() {
                 onDragEnd={() => { draggedLayerRef.current = null; setLayerDrop(null); }}>
                 <span className="layer-grip" title="拖动图层调整顺序"><DotsSixVertical /></span>
                 <button className={`layer-select ${active === layer ? "active" : ""}`}
-                  onClick={() => { setActive(layer); if (layer === "background" || layer === "solid") { setMaskMode("none"); setMaskView(false); } }}
+                  onClick={() => { if (inspectorEnabled) setInspectorOpen(true); setActive(layer); if (layer === "background" || layer === "solid") { setMaskMode("none"); setMaskView(false); } }}
                 >
-                  <span
-                    className={`layer-mark ${layer}`}
-                    style={
-                      layer === "solid" ? { background: color } : undefined
-                    }
-                  />
+                  <span className="layer-glyph" aria-hidden="true">
+                    {layer === 'silhouette' ? <Selection size={22} weight="light" /> : layer === 'subject' ? <UserCircle size={22} weight="light" /> : layer === 'solid' ? <Square size={22} weight="light" /> : <ImageSquare size={22} weight="light" />}
+                  </span>
                   <span>
                     <strong>{layerNames[layer]}</strong>
                     <small>{layerNotes[layer]}</small>
@@ -1789,8 +1871,8 @@ export default function App() {
                 <Range name="文字密度" min={1} max={100} value={silhouetteEffect.density} set={density => setSilhouetteEffect(current => ({...current, density}))} />
                 <Range name="散落字号" min={30} max={600} value={silhouetteEffect.fontSize} set={fontSize => setSilhouetteEffect(current => ({...current, fontSize}))} />
                 <p className="control-note">字号按照片尺寸等比例缩放，独立于像素大小；放大剪影或高清导出时，文字会同步变大。</p>
-                <label className="effect-field">散落文字颜色<input type="color" aria-label="散落文字颜色" value={silhouetteEffect.textColor}
-                  onChange={event => setSilhouetteEffect(current => ({...current, textColor: event.target.value}))} /></label>
+                <ColorField label="散落文字颜色" value={silhouetteEffect.textColor}
+                  onChange={textColor => setSilhouetteEffect(current => ({...current, textColor}))} />
                 <button type="button" className="secondary full" onClick={() => setSilhouetteEffect(current => ({...current, seed: current.seed + 1}))}>换一种散落排列</button>
               </>}
               <p className="control-note">像素轮廓为实心方块；文字仅散落在剪影内部。关掉文字即可保留纯像素效果，切回实心轮廓并关闭文字可恢复原剪影。</p>
@@ -1798,8 +1880,19 @@ export default function App() {
           </Sec>
         )}
 
+        {active === 'subject' && <Sec l="实体主体文字">
+          <label className="check-control"><input type="checkbox" checked={subjectText.textEnabled} onChange={e => setSubjectText(v => ({...v, textEnabled: e.target.checked}))} />添加散落文字</label>
+          {subjectText.textEnabled && <>
+            <label className="effect-text-label">文字内容<textarea aria-label="实体主体文字内容" value={subjectText.text} maxLength={500} onChange={e => setSubjectText(v => ({...v,text:e.target.value}))} /></label>
+            <Range name="文字密度" min={1} max={100} value={subjectText.density} set={density => setSubjectText(v => ({...v,density}))} />
+            <Range name="散落字号" min={30} max={600} value={subjectText.fontSize} set={fontSize => setSubjectText(v => ({...v,fontSize}))} />
+            <ColorField label="实体主体文字颜色" name="文字颜色" value={subjectText.textColor} onChange={textColor => setSubjectText(v => ({...v,textColor}))} />
+            <button className="secondary full" onClick={() => setSubjectText(v => ({...v,seed:v.seed+1}))}>换一种散落排列</button>
+          </>}
+        </Sec>}
         {(active === "solid" || active === "silhouette") && (
           <Sec l="纯色">
+            <ColorField label="填充颜色" name="当前颜色" value={color} onChange={setColor} />
             <div className="swatches">
               {suggestedColors.map((swatch) => (
                 <button
@@ -1812,14 +1905,7 @@ export default function App() {
                   {color === swatch && <Check />}
                 </button>
               ))}
-              <label className="custom-swatch" style={{ background: color }}>
-                <input
-                  type="color"
-                  value={color}
-                  onChange={(event) => setColor(event.target.value)}
-                />
-                <span>+</span>
-              </label>
+
             </div>
           </Sec>
         )}
@@ -1874,8 +1960,11 @@ export default function App() {
           <Sec l="自由涂抹">
             <label className="check-control"><input type="checkbox" checked={maskView} onChange={event => setMaskView(event.target.checked)} />查看透明蒙版</label>
             <Range name="轮廓识别阈值" min={24} max={200} value={alphaThreshold} set={setAlphaThreshold} />
-            <button className="secondary full" disabled={!hasImage || busy} onClick={applyThreshold}>重新应用实心轮廓</button>
-            <p className="control-note">降低阈值保留细节；重新应用会清除手动画笔修改。</p>
+            <div className="threshold-preview-actions">
+              <button className="secondary" disabled={!hasImage || busy || !thresholdPreviewPending} onClick={applyThreshold}>应用轮廓</button>
+              {thresholdPreviewPending && <button className="secondary" onClick={() => setAlphaThreshold(appliedThreshold)}>取消预览</button>}
+            </div>
+            <p className="control-note" role="status">{thresholdPreviewPending ? '正在预览轮廓。点应用确认，取消可保留当前涂抹；应用会替换手动修改。' : '拖动立即预览；数值越小，保留的轮廓细节越多。'}</p>
             <p className="control-note">
               可直接在纯色剪影或实体主体上涂抹。画笔取回原图像素，橡皮擦删除区域；两边共享轮廓并同步更新，圆圈为实际作用范围。
             </p>
@@ -1960,12 +2049,12 @@ export default function App() {
       split,
       tone,
       transforms,
-      suggestedColors, alphaThreshold, maskView, busy, texture,
+      suggestedColors, alphaThreshold, appliedThreshold, thresholdPreviewPending, maskView, busy, texture,
       sceneMode, sceneColor, backgroundId, backgroundName, autoBackground, backgroundLoading, backgroundRevision, hasImage,
       originalLinked,
       layerOrder, layerDrop,
-      canvasRatioLocked,
-      halftone, silhouetteEffect,
+      canvasRatioLocked, inspectorEnabled,
+      halftone, silhouetteEffect, subjectText,
       panelsSwapped,
     ],
   );
@@ -1973,18 +2062,20 @@ export default function App() {
   const finishPanel = (
     <>
       <Title t="高清导出" s="选择框和修补提示不会进入导出图片" />
+      {thresholdPreviewPending && <div className="threshold-export-note"><p className="control-note">先应用或取消轮廓预览，再导出图片。</p><button className="secondary" onClick={applyThreshold}>应用轮廓</button><button className="secondary" onClick={() => setAlphaThreshold(appliedThreshold)}>取消预览</button></div>}
       <Sec l="导出分辨率">
         <Seg options={[["1", "1×"], ["2", "2× 高清"], ["4", "4× 超清"]]} value={String(exportScale)} set={value => setExportScale(Number(value))} />
         <p className="control-note">从原图与独立图层重新渲染。{exportDimensions.limited ? "已按浏览器内存预算限制尺寸。" : "选择框与工具按钮不会进入图片。"}</p>
       </Sec>
       <div className="export-card">
+        <h2 className="export-card-title">导出文件</h2>
         <strong>
           {Math.round(size.w * exportMultiplier)} ×{" "}
           {Math.round(size.h * exportMultiplier)} px
         </strong>
         <button
           className="primary full"
-          disabled={!hasImage || exporting || busy || backgroundLoading}
+          disabled={!hasImage || exporting || busy || backgroundLoading || thresholdPreviewPending}
           onClick={() => download("png")}
         >
           <DownloadSimple />
@@ -1992,19 +2083,19 @@ export default function App() {
         </button>
         <button
           className="secondary full"
-          disabled={!hasImage || exporting || busy || backgroundLoading}
+          disabled={!hasImage || exporting || busy || backgroundLoading || thresholdPreviewPending}
           onClick={() => download("jpeg")}
         >
-          导出 JPG
+          <DownloadSimple />导出 JPG
         </button>
-        <button className="secondary full" disabled={!hasImage || exporting || busy || backgroundLoading} onClick={() => download("webp")}>导出 WebP</button>
-        <button className="secondary full" disabled={!hasImage || exporting || busy || backgroundLoading} onClick={() => download("png", true)}>导出透明剪影 PNG</button>
+        <button className="secondary full" disabled={!hasImage || exporting || busy || backgroundLoading || thresholdPreviewPending} onClick={() => download("webp")}><DownloadSimple />导出 WebP</button>
+        <button className="secondary full" disabled={!hasImage || exporting || busy || backgroundLoading || thresholdPreviewPending} onClick={() => download("png", true)}><DownloadSimple />导出透明剪影 PNG</button>
         <button
           className="secondary full desktop-psd"
-          disabled={!hasImage || exporting || busy || backgroundLoading}
+          disabled={!hasImage || exporting || busy || backgroundLoading || thresholdPreviewPending}
           onClick={exportPsd}
         >
-          导出分层 PSD
+          <DownloadSimple />导出分层 PSD
         </button>
       </div>
       {exporting && <p className="control-note" role="status">{progress}</p>}
@@ -2012,6 +2103,61 @@ export default function App() {
   );
 
   const panel = tool === "edit" ? editPanel : finishPanel;
+  const contextLabels: Record<Layer, string[]> = {
+    background: ['剪影背景', '背景图片色调'],
+    solid: ['纯色'],
+    subject: ['实体主体效果', '实体主体文字', '自由涂抹'],
+    silhouette: ['剪影轮廓与散落文字', '纯色', '剪影阴影', '自由涂抹'],
+  };
+  const contextSections = Children.toArray(editPanel.props.children).filter(child =>
+    isValidElement<{l?: string}>(child) && contextLabels[active].includes(child.props.l ?? ''));
+  useEffect(() => {
+    if (!inspectorOpen) return;
+    const keepCardVisible = () => setCardPosition(position => {
+      if (!position) return position;
+      const x = Math.max(8, Math.min(position.x, window.innerWidth - 288));
+      const y = Math.max(8, Math.min(position.y, window.innerHeight - 368));
+      return x === position.x && y === position.y ? position : {x,y};
+    });
+    keepCardVisible();
+    window.addEventListener('resize', keepCardVisible);
+    const dismiss = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest('.context-card, .canvas-wrap, .layer-select, .object-switch')) return;
+      setInspectorOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') setInspectorOpen(false); };
+    document.addEventListener('pointerdown', dismiss, true);
+    document.addEventListener('keydown', escape);
+    return () => { window.removeEventListener('resize', keepCardVisible); document.removeEventListener('pointerdown', dismiss, true); document.removeEventListener('keydown', escape); };
+  }, [inspectorOpen]);
+  const contextCard = hasImage && inspectorEnabled && inspectorOpen && <aside className="context-card" style={cardPosition ? {left:cardPosition.x,top:cardPosition.y,right:'auto'} : undefined} aria-label={`${layerNames[active]}调整卡片`}>
+    <header className="context-card-head" title="拖动标题栏移动卡片"
+      onPointerDown={event => {
+        if (event.button !== 0 || (event.target as Element).closest('button')) return;
+        const rect = event.currentTarget.parentElement!.getBoundingClientRect();
+        contextDragRef.current = {id:event.pointerId,dx:event.clientX-rect.left,dy:event.clientY-rect.top,x:rect.left,y:rect.top};
+        event.currentTarget.setPointerCapture(event.pointerId); event.preventDefault();
+      }}
+      onPointerMove={event => {
+        const drag = contextDragRef.current; if (!drag || drag.id !== event.pointerId) return;
+        const card = event.currentTarget.parentElement!;
+        drag.x = Math.max(8,Math.min(window.innerWidth-card.offsetWidth-8,event.clientX-drag.dx));
+        drag.y = Math.max(8,Math.min(window.innerHeight-card.offsetHeight-8,event.clientY-drag.dy));
+        card.style.left = `${drag.x}px`; card.style.top = `${drag.y}px`; card.style.right = 'auto';
+      }}
+      onPointerUp={() => { const drag=contextDragRef.current; if(drag) setCardPosition({x:drag.x,y:drag.y}); contextDragRef.current=null; }}
+      onPointerCancel={() => { const drag=contextDragRef.current; if(drag) setCardPosition({x:drag.x,y:drag.y}); contextDragRef.current=null; }}>
+<div><span className="context-eyebrow">当前选区</span><h2>{layerNames[active]}</h2></div>
+      <button type="button" className="context-close" aria-label="关闭调整卡片" onClick={() => setInspectorOpen(false)}><X /></button>
+    </header>
+    <div className="context-card-body" ref={inspectorBodyRef}><fieldset disabled={busy || exporting} className="panel-fieldset">
+      {contextSections}
+      {active === 'subject' && <Sec l="大小与位置">{transformControls(active, false)}</Sec>}
+    </fieldset></div>
+  </aside>;
+
 
   return (
     <main
@@ -2026,7 +2172,7 @@ export default function App() {
         if (dropped) upload(dropped);
       }}
     >
-      <div className="workspace">
+      <div className={`workspace ${hasImage ? "has-context-space" : ""}`}>
         <section className="side-panel">
       <header className="topbar">
         <div className="brand">
@@ -2111,7 +2257,8 @@ export default function App() {
         </div>
       </header>
 
-        <nav className="sidebar-tabs" aria-label="编辑面板">
+
+<nav className="sidebar-tabs" aria-label="编辑面板">
           <ToolButton
             id="edit"
             label="编辑"
@@ -2150,11 +2297,61 @@ export default function App() {
             </span>
             <span className="canvas-view-controls">
               <button type="button" className="canvas-fit" onClick={fitCanvasToStage} title="保持原比例完整显示，不改变导出尺寸"><CornersOut />适应窗口</button>
-              <small>{displayWidth ? Math.round(displayWidth / size.w * 100) : 100}%</small>
+              <button type="button" className="canvas-nav" aria-label="移动画布" aria-pressed={canvasView.handMode} title="拖动画布，也可按住空格或鼠标中键拖动" onClick={() => canvasView.setHandMode(value => !value)}><Hand /></button>
+              <span className="canvas-zoom-group">
+                <button type="button" className="canvas-nav" aria-label="缩小画布" disabled={canvasView.zoom <= .1} onClick={() => canvasView.zoomBy(1 / 1.2)}><MagnifyingGlassMinus /></button>
+                <small aria-label="画布缩放比例">{displayWidth ? Math.round(displayWidth / size.w * canvasView.zoom * 100) : 100}%</small>
+                <button type="button" className="canvas-nav" aria-label="放大画布" disabled={canvasView.zoom >= 8} onClick={() => canvasView.zoomBy(1.2)}><MagnifyingGlassPlus /></button>
+              </span>
               {hasImage ? `当前图层  ${layerNames[active]}` : "等待照片"}
+<button type="button" className="context-toggle" aria-pressed={inspectorEnabled} title="开启或关闭选区调整卡片" onClick={() => { setInspectorEnabled(enabled => !enabled); setInspectorOpen(false); }}>浮现卡片<span aria-hidden="true">{inspectorEnabled ? "开" : "关"}</span></button>
+<div className="theme-corner" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setThemeMenuOpen(false); }} onKeyDown={event => { if (event.key === 'Escape') { setThemeMenuOpen(false); event.currentTarget.querySelector('button')?.focus(); } }}>
+  <button className="template-theme-toggle" type="button" aria-label="选择界面主题" title="切换界面主题" aria-expanded={themeMenuOpen} aria-controls="theme-choices" onClick={() => setThemeMenuOpen(open => !open)}><TemplateThemeIcon dark={uiTheme === 'dark'} /></button>
+  {themeMenuOpen && <div className="theme-popover" id="theme-choices" role="group" aria-label="界面主题">
+    {(['light', 'ivory', 'dark'] as const).map(theme => <button key={theme} type="button" aria-pressed={uiTheme === theme} onClick={() => { setUiTheme(theme); setThemeMenuOpen(false); }}>{({ light: '浅色', ivory: '米白', dark: '深色' })[theme]}</button>)}
+  </div>}
+</div>
             </span>
           </div>
+          {hasImage && maskMode !== "none" && !thresholdPreviewPending && (
+            <RepairToolbar>
+              <span className="repair-toolbar-grip" title="拖动此处移动修补工具栏">
+                <DotsSixVertical aria-hidden="true" />
+                {maskMode === "paint" ? "自由涂抹" : "橡皮擦"} ·{" "}
+                {layerNames[active]} · {activeBrushSize}px
+              </span>
+              <div className="mask-target-switch">
+                <button className={active === "silhouette" ? "active" : ""} onClick={() => setActive("silhouette")} aria-label="在纯色剪影上涂抹">纯色剪影</button>
+                <button className={active === "subject" ? "active" : ""} disabled={layout === "overlay"} onClick={() => setActive("subject")} aria-label="在实体主体上涂抹">实体主体</button>
+              </div>
+              <div className="mask-history-actions">
+                <button
+                  disabled={maskHistoryRef.current.undo.length === 0}
+                  onClick={undoMask}
+                  aria-label="撤销涂抹"
+                  title="撤销"
+                >
+                  <ArrowCounterClockwise />
+                </button>
+                <button
+                  disabled={maskHistoryRef.current.redo.length === 0}
+                  onClick={redoMask}
+                  aria-label="重做涂抹"
+                  title="重做"
+                >
+                  <ArrowClockwise />
+                </button>
+              </div>
+              <button className="mask-finish" onClick={finishMask}>
+                完成修补
+              </button>
+            </RepairToolbar>
+          )}
+
+          <div ref={canvasView.viewportRef} className={`canvas-view-area ${canvasView.panReady ? 'is-pan-ready' : ''} ${canvasView.panning ? 'is-panning' : ''}`}
+            tabIndex={-1} aria-label="画布视区" {...canvasView.handlers}>
           <div
+            ref={canvasView.wrapRef}
             className={`canvas-wrap ${!hasImage ? "empty" : ""} ${maskMode !== "none" ? "repairing" : ""}`}
             style={
               {
@@ -2171,7 +2368,7 @@ export default function App() {
               onPointerUp={pointerUp}
               onPointerCancel={pointerUp}
               onPointerEnter={(event) => {
-                if (maskMode !== "none")
+                if (maskMode !== "none" && !canvasView.panReady)
                   positionBrushCursor(pointerPoint(event));
               }}
               onPointerLeave={() => {
@@ -2179,7 +2376,7 @@ export default function App() {
                   brushCursorRef.current.style.display = "none";
               }}
             />
-            {hasImage && maskMode === "none" && !maskView && !busy && !exporting && selectionGeometry && (
+            {hasImage && maskMode === "none" && !maskView && !busy && !exporting && !thresholdPreviewPending && selectionGeometry && (
               <div
                 className="transform-overlay"
                 onPointerMove={updateTransformGesture}
@@ -2204,6 +2401,7 @@ export default function App() {
                     onPointerDown={(event) => {
                       const selected = pickLayer(pointerPoint(event));
                       setActive(selected);
+                      if (inspectorEnabled) setInspectorOpen(true);
                       if (selected !== "solid" && !(selected === 'background' && sceneMode === 'solid')) beginTransformGesture(event, "move", selected);
                     }}
                   >
@@ -2232,7 +2430,7 @@ export default function App() {
                 </div>
               </div>
             )}
-            {hasImage && maskMode !== "none" && (
+            {hasImage && maskMode !== "none" && !thresholdPreviewPending && (
               <div
                 ref={brushCursorRef}
                 className={`brush-cursor ${maskMode}`}
@@ -2265,6 +2463,8 @@ export default function App() {
             )}
           </div>
 
+          </div>
+
           {hasImage && maskMode === "none" && (
             <div className="object-switch">
               {(
@@ -2285,40 +2485,7 @@ export default function App() {
             </div>
           )}
 
-          {hasImage && maskMode !== "none" && (
-            <div className="mask-status">
-              <span>
-                {maskMode === "paint" ? "自由涂抹" : "橡皮擦"} ·{" "}
-                {layerNames[active]} · {activeBrushSize}px
-              </span>
-              <div className="mask-target-switch">
-                <button className={active === "silhouette" ? "active" : ""} onClick={() => setActive("silhouette")} aria-label="在纯色剪影上涂抹">纯色剪影</button>
-                <button className={active === "subject" ? "active" : ""} disabled={layout === "overlay"} onClick={() => setActive("subject")} aria-label="在实体主体上涂抹">实体主体</button>
-              </div>
-              <div className="mask-history-actions">
-                <button
-                  disabled={maskHistoryRef.current.undo.length === 0}
-                  onClick={undoMask}
-                  aria-label="撤销涂抹"
-                  title="撤销"
-                >
-                  <ArrowCounterClockwise />
-                </button>
-                <button
-                  disabled={maskHistoryRef.current.redo.length === 0}
-                  onClick={redoMask}
-                  aria-label="重做涂抹"
-                  title="重做"
-                >
-                  <ArrowClockwise />
-                </button>
-              </div>
-              <button className="mask-finish" onClick={finishMask}>
-                完成修补
-              </button>
-            </div>
-          )}
-
+          {thresholdPreviewPending && <div className="threshold-stage-status" role="status"><span>轮廓预览 · {alphaThreshold}</span><button className="secondary" onClick={applyThreshold}>应用</button><button className="secondary" onClick={() => setAlphaThreshold(appliedThreshold)}>取消</button></div>}
           {processingMode && hasImage && <p className="runtime-note">{processingMode} · 照片在本机处理</p>}
           {error && (
             <div className="error-note" role="alert">
@@ -2330,6 +2497,7 @@ export default function App() {
             </div>
           )}
         </section>
+        {contextCard}
       </div>
 
       <div className="mobile-bar">

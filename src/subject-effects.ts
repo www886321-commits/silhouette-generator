@@ -100,12 +100,14 @@ export function scatterTextMetrics(width: number, height: number, settings: Pick
   return { fontSize, spacing };
 }
 
-export function silhouetteSubject(source: HTMLCanvasElement, fill: string, settings: SilhouetteSettings, maxEdge = Infinity, outputScale = 1) {
+export function silhouetteSubject(source: HTMLCanvasElement, fill: string, settings: SilhouetteSettings, maxEdge = Infinity, outputScale = 1, basePhoto?: CanvasImageSource) {
   const canvas = surface(source,maxEdge,outputScale), context = canvas.getContext('2d')!;
   const w = source.width, h = source.height, sx = canvas.width / w, sy = canvas.height / h;
   const step = Math.max(1, settings.cellSize) * Math.max(w,h) / 1000;
   const sample = sampler(source), columns = Math.ceil(w / step), rows = Math.ceil(h / step);
-  if (settings.style === 'clean') {
+  if (basePhoto) {
+    context.drawImage(basePhoto, 0, 0, canvas.width, canvas.height);
+  } else if (settings.style === 'clean') {
     context.drawImage(source,0,0,canvas.width,canvas.height);
     const pixels = context.getImageData(0,0,canvas.width,canvas.height);
     for(let i=3;i<pixels.data.length;i+=4)pixels.data[i]=pixels.data[i]>12?255:0;

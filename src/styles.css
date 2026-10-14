@@ -476,13 +476,13 @@ button:disabled {
   text-shadow: 0 1px 3px #000;
 }
 .range-row {
-  display: grid !important;
+  display: grid;
   grid-template-columns: 64px 1fr;
   align-items: center;
-  margin: 12px 0 !important;
-  font-size: 11px !important;
-  letter-spacing: 0 !important;
-  font-weight: 400 !important;
+  margin: 12px 0;
+  font-size: 11px;
+  letter-spacing: 0;
+  font-weight: 400;
 }
 .range-row input {
   accent-color: var(--ink);
@@ -532,7 +532,8 @@ textarea,
   margin-top: 8px;
 }
 .export-card .secondary {
-  background: #fff;
+  background: var(--panel);
+  color: var(--ink);
 }
 .stage {
   min-width: 0;
@@ -1036,8 +1037,8 @@ textarea,
   display: flex !important;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px !important;
-  letter-spacing: 0 !important;
+  font-size: 11px;
+  letter-spacing: 0;
 }
 .color-row input {
   width: 42px;

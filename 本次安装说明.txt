@@ -1,0 +1,52 @@
+﻿剪影生成器 v1.3.0｜本次安装说明
+发布日期：2026年10月14日
+作者：安鱼 https://www.anyusj.com/
+
+一、把安装包交给 AI
+请发送完整的 silhouette-generator-v1.3.0-desktop.zip 给支持本地文件操作的 AI，或先完整解压，再发送安装目录路径与下面的任务：
+
+请把这个剪影生成器完整安装到我的电脑。先读“本次安装说明.txt”和 AGENT-INSTALL.md，检查环境和包内文件，启动本地网页，验证入口、离线模型、上传我允许的测试照片和 PNG 导出。不要部署公网，不要上传我的照片，不要设置开机自启，不要覆盖其他目录。完成后告诉我以后如何启动和停止。
+
+仅聊天、不能操作本机文件的 AI 无法替你直接安装；此时按以下步骤自行启动。
+
+二、安装条件
+推荐 Windows 10/11 与最新版桌面 Chrome 或 Edge。
+已安装 Node.js（建议 22.12+ 或仍受支持的更新 LTS）或 Python 3.8+ 即可启动成品包；不需要 npm install，不需要重编译。
+没有运行环境时，让 AI 按你授权的流程从 Node.js 官方网站安装受支持版本。安装运行环境可能需要联网；包内识别模型、背景和字体已内置，正常处理照片不需要联网。
+本次以 Windows Chromium 环境验证。提供 Mac/Linux 启动文件，但不代表已完成真机验证。
+
+三、完整解压
+将整个 ZIP 解压到普通文件夹，如 D:\剪影生成器，不要只取 app 文件夹，也不要在压缩包预览窗口里启动。
+文件夹必须包含：app、source、licenses、vendor、local-server.mjs、local-server.py、START-*、STOP-*、AGENT-INSTALL.md、LICENSE、中文 TXT 说明。
+app/models/resources.json 和配套模型块不能缺失；app/fonts 是标题与数字字体；app/backgrounds 是内置背景。
+source 是本次对应源码，不包含 node_modules。需要改源码时再安装依赖；离线重建先将 app/models 完整复制到 source/public/models。
+
+四、日常启动与停止
+Windows：双击 START-WINDOWS.cmd。启动成功后会自动打开本地网页，启动窗口自动退出。
+Mac：给 START-MAC.command 与 STOP-MAC.command 执行权限，再打开 START-MAC.command。
+Linux：给 START-LINUX.sh 与 STOP-LINUX.sh 执行权限，再运行 START-LINUX.sh。
+默认地址为 http://127.0.0.1:4173/，端口占用时在 4173–4193 中顺延；以实际输出为准。
+服务器只监听本机。重复启动可复用此目录的服务，不会启动公网服务。
+停止用对应 STOP-* 文件；它只停止本安装目录经过校验的服务。重启电脑后需要再次启动。
+不要双击 app/index.html；file:// 无法可靠加载识别模型和模块。
+
+五、AI 安装验收
+1. 使用 Node.js 运行 node local-server.mjs --check（或对应 Python 检查）。确认入口资源和离线模型存在。
+2. 启动服务，确认 /__afterimage_health 的 tool 为 afterimage。
+3. 打开工具页，确认三主题、独立卡片、色值输入、画布拖动和缩放按钮可见；进入修补后，检查顶部可拖动修补浮条和完成修补按钮。
+4. 用用户允许的本地照片验证识别，检查原图挖空、图层拖动和 PNG 导出。
+5. 输入 HEX 色值验证颜色与色块同步；点击适应窗口确认居中复位。
+6. 告诉用户启动文件所在目录、实际浏览器地址和停止方法。
+
+六、常见问题
+页面空白：确认完整解压，通过 START-* 打开；尝试新版 Chrome/Edge并刷新。
+没有 Node.js/Python：先安装运行环境。不要要求关闭安全软件或修改系统保护。
+识别失败：尝试界面上的 CPU 兼容重试；小图和清晰的人物边缘更易处理。
+端口不可用：检查 4173–4193 是否全部占用。不要强行结束其他程序。
+安装报错：查看此目录新生成的 startup.log，将错误文字交给 AI。不要自动上传日志或照片。
+浏览器端不保存可恢复的完整编辑工程，刷新前请先导出作品。
+
+七、更新与授权
+更新时先停止旧服务，保留旧目录，完整解压新包到新的普通目录。确认新版正常再按你的需求整理旧文件。
+软件为 AGPL-3.0-only；随包保留对应源码与第三方许可证。字体、背景另按各自许可。详见 LICENSE、THIRD-PARTY-NOTICES.md、licenses 和 fonts 内许可。
+这不是系统安装程序，不设置注册表、自启动、云上传或公网部署。
